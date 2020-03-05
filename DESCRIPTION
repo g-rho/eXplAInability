@@ -1,0 +1,15 @@
+Package: eXplAInability
+Title: Numerical and visual tools to analyse the explainability of partial dependence functions
+Version: 0.0.0.9001
+Author: Gero Szepannek [aut, cre]
+Maintainer: Gero Szepannek <gero.szepannek@web.de>
+Description: Computes the explainability for partial dependence functions of machine learning models, matchplots between PDP and the model's predictions or 2d gap plots  as well as scatterplot matrices of 2D partial depencence functions according to Szepannek, G. (2019): How Much Can We See? A Note on Quantifying Explainability of Machine Learning Models, arXiv: 1910.13376 [stat.ML].
+License: GPL (>=2)
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    pdp,
+    randomForest,
+    colorRamps,
+    GISTools
+RoxygenNote: 6.1.1
