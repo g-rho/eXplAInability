@@ -4,8 +4,18 @@
 \alias{pdp2d}
 \title{Explanation gap visualization}
 \usage{
-pdp2d(model, x, vnames, type = "pdp", depth = 21, alpha = 2/3,
-  right = 0.8, top = 0.95, digits = 1)
+pdp2d(
+  model,
+  x,
+  vnames,
+  type = "pdp",
+  depth = 21,
+  alpha = 2/3,
+  right = 0.8,
+  top = 0.95,
+  digits = 1,
+  ...
+)
 }
 \arguments{
 \item{model}{A model with corresponding predict function that returns numeric values.}
@@ -27,6 +37,8 @@ In case of \code{"both"} two plots are created.}
 \item{top}{Position where to place the legend relative to the range of the y axis.}
 
 \item{digits}{Nuber of digits for rounding in the legend.}
+
+\item{...}{Further arguments to be passed to the \code{predict()} method of the \code{model}.}
 }
 \description{
 Visualization of 2D PDP vs. unexplained residual predictions.

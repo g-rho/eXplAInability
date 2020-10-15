@@ -2,16 +2,18 @@
 % Please edit documentation in R/explainability.R
 \name{fw.xpy}
 \alias{fw.xpy}
-\title{Formward variable selection for PDP explanation}
+\title{Forward variable selection for PDP explanation}
 \usage{
-fw.xpy(model, x, target)
+fw.xpy(model, x, target, ...)
 }
 \arguments{
 \item{model}{A model with corresponding predict function that returns numeric values.}
 
 \item{x}{Data frame.}
 
-\item{target}{Character specifxing the name of the (numeric) target variable (must be contained in data).}
+\item{target}{Character specifying the name of the (numeric) target variable (must be contained in data).}
+
+\item{...}{Further arguments to be passed to the \code{predict()} method of the \code{model}.}
 }
 \value{
 Object of class \code{vsexp} containing the following elements:

@@ -4,7 +4,7 @@
 \alias{xpy}
 \title{Explainability and matchplot for PDP}
 \usage{
-xpy(model, x, vnames, viz = TRUE)
+xpy(model, x, vnames, viz = TRUE, ...)
 }
 \arguments{
 \item{model}{A model with corresponding predict function that returns numeric values.}
@@ -14,6 +14,8 @@ xpy(model, x, vnames, viz = TRUE)
 \item{vnames}{Character vector of the variable set for which the patial dependence function is to be computed.}
 
 \item{viz}{Logical specifying whether a matchplot should be created.}
+
+\item{...}{Further arguments to be passed to the \code{predict()} method of the \code{model}.}
 }
 \value{
 Numeric value with the explainability of the partial dependence function for the variables specified in \code{vnames}.
