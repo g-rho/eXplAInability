@@ -59,7 +59,7 @@ xpy <- function(model, x, vnames, viz = TRUE, ...){
   #cbind(pdps$x, pred, avpred)
   if(viz){
     rnge <- range(c(range(pred), range(pdps$x)))
-    plot(pdps$x, pred, xlim = rnge, ylim = rnge, ylab = "PDP", xlab = "Prediction", pch = 4, main = "PDP vs. Predictions")
+    plot(pdps$x, pred, xlim = rnge, ylim = rnge, xlab = "PDP", ylab = "Prediction", pch = 4, main = "PDP vs. Predictions")
     lines(rnge, rnge, lty = "dotted")
   }
 
