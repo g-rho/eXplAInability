@@ -11,5 +11,9 @@ Imports:
     pdp,
     randomForest,
     colorRamps,
-    GISTools
-RoxygenNote: 7.0.2
+    GISTools,
+    dplyr,
+    parallel,
+    doParallel,
+    foreach
+RoxygenNote: 7.1.1

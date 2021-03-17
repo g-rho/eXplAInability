@@ -9,17 +9,31 @@
 #' @importFrom graphics legend
 #' @importFrom stats aggregate
 #' @importFrom stats predict
+#' @importFrom dplyr sample_n
+#' @importFrom dplyr group_by
+#' @importFrom dplyr group_indices
+#' @importFrom parallel detectCores
+#' @importFrom parallel makeCluster
+#' @importFrom parallel stopCluster
+#' @importFrom doParallel registerDoParallel
+#' @importFrom foreach foreach
+#' @importFrom foreach %dopar%
+
+
 
 
 #' @title Explainability and matchplot for PDP
 #'
 #' @description Computes explainability and matchplots for a partial dependence function.
 #'
-#' @param model   A model with corresponding predict function that returns numeric values.
-#' @param x       Data frame.
-#' @param vnames  Character vector of the variable set for which the patial dependence function is to be computed.
-#' @param viz     Logical specifying whether a matchplot should be created.
-#' @param ...     Further arguments to be passed to the \code{predict()} method of the \code{model}.
+#' @param model     A model with corresponding predict function that returns numeric values.
+#' @param x         Data frame.
+#' @param vnames    Character vector of the variable set for which the patial dependence function is to be computed.
+#' @param viz       Logical specifying whether a matchplot should be created.
+#' @param parallel  Logical specifying whether computation should be parallel.
+#' @param sample    fraction-size for sampling of x.
+#' @param pfunction User generated predict function.
+#' @param ...       Further arguments to be passed to the \code{predict()} method of the \code{model}.
 #'
 #' @return Numeric value with the explainability of the partial dependence function for the variables specified in \code{vnames}.
 #'
@@ -41,30 +55,102 @@
 #'   }
 #'
 #' @rdname xpy
-xpy <- function(model, x, vnames, viz = TRUE, ...){
+xpy <- function(model, x, vnames, viz = TRUE, parallel = TRUE, sample = 1, pfunction = NULL, ...){
 
-  xs    <- x[, names(x) %in% vnames, drop = FALSE]
+  # number of unique observations to give to processors each step
+  ssize <- 20
+
+  # Sampling
+  sample_n(x, round(nrow(x)*sample))
+
+  # required packages to be loaded in parallel R-threads
+  # this should be extracted from variable model
+  pckgs = c("randomForest")
+
+  # checking for predict_function parameter
+  if (is.null(pfunction)) {
+    # predict_function not specified
+    pfunction <- predict
+  }
+
+  # adding indices for unique vnames-values
+  x <- x %>% group_by(x[,names(x) %in% vnames])
+  x$ind <- x %>% group_indices()
+
+  # ignore duplicates in xs
+  xs <- x[!duplicated(x[,"ind"]), names(x) %in% append("ind", vnames)]
   xs    <- data.frame(ID = 1:nrow(xs), xs)
-  xrest <- x[, !names(x) %in% vnames, drop = FALSE]
 
-  xx    <- merge(xs, xrest, by.x = NULL, by.y = NULL)
-  ID <- xx[,1]
+  # keep column ind for join
+  xrest <- x[, !names(x) %in% append("ind", vnames), drop = FALSE]
 
-  xx$yhat <- predict(model, xx[,-1], ...)
-  pdps <- aggregate(xx$yhat, list(ID), mean)
-  pred <- predict(model, x, ...)
+  # checking if parallel computation should be used
+  if (parallel) {
+    # calculate number of steps of size ssize
+    steps <- ceiling(nrow(xs)/ssize)
 
-  avpred <- mean(pred)
+    # create cluster of all available cores on host
+    cl <- makeCluster(detectCores())    # uses parallel::detectCores() + ::makeCluster
 
-  #cbind(pdps$x, pred, avpred)
+    # register cluster for foreach
+    registerDoParallel(cl)
+
+    # parallel loop 1 to steps, results are concatenated ('c'),
+    # load pckgs in every thread
+    pdps <- foreach(i = 1:steps, .combine = 'c',.packages = pckgs) %dopar% {  # uses foreach::foreach
+
+      # beginning of subset
+      ifrom <- (i-1)*ssize +1
+
+      # end of subset
+      ito <- min(i*ssize, nrow(xs))
+
+      # cartesian product
+      xx <- merge(xs[ifrom:ito,], xrest, by = NULL)
+
+      # predict
+      xx$yhat <- pfunction(model, xx, ...)
+
+      # compute average prediction
+      return(pred = tapply(xx$yhat, xx$ind, mean))
+    }
+
+    stopCluster(cl)
+
+    # convert results to dataframe
+    pdps <- stack(pdps)
+
+    x$pred <-  pfunction(model, x, ...)
+    avpred <- mean(x$pred)
+
+    # merge results
+    preds <- merge(pdps, x[, c("pred","ind"), drop = FALSE])
+  }
+  else {
+    # parallel = FALSE
+    pdps <- NULL
+    from <- seq(1, nrow(xs), by = ssize)
+    for ( i in from){
+      xx <- merge(xs[i:min((i+ssize-1),nrow(xs)),], xrest , by.x = NULL, by.y = NULL)
+      ID <- xx[,"ind"]
+      xx$yhat <- pfunction(model, xx)
+      pdps <- rbind(pdps, aggregate(xx$yhat, list(ID), mean))
+    }
+    x$pred <- pfunction(model, x)
+    avpred <- mean(x$pred)
+    preds <- merge(pdps, x[, c("pred","ind"), drop = FALSE], by.x = "Group.1", by.y = "ind")
+    colnames(preds)[2] <- "values"
+  }
+
+  # plotting
   if(viz){
-    rnge <- range(c(range(pred), range(pdps$x)))
-    plot(pdps$x, pred, xlim = rnge, ylim = rnge, xlab = "PDP", ylab = "Prediction", pch = 4, main = "PDP vs. Predictions")
+    rnge <- range(c(range(preds$pred), range(preds$values)))
+    plot(preds$values, preds$pred, xlim = rnge, ylim = rnge, xlab = "PDP", ylab = "Prediction", pch = 4, main = "PDP vs. Predictions")
     lines(rnge, rnge, lty = "dotted")
   }
 
-  ASE <- mean((pred - pdps$x)^2)
-  ASE0 <- mean((pred - avpred)^2)
+  ASE <- mean((preds$pred - preds$values)^2)
+  ASE0 <- mean((preds$pred - avpred)^2)
   xty <- 1 - ASE / ASE0
   xty
 }
